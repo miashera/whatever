@@ -11,9 +11,10 @@ const unlockButton = document.getElementById('unlock-button');
 const setPasswordButton = document.getElementById('set-password-button');
 const lockError = document.getElementById('lock-error');
 
-const dashboardWrapper = document.getElementById('dashboard-wrapper');
+const mainAppContent = document.getElementById('main-app-content');
 const lockExtensionButton = document.getElementById('lock-extension-button');
 const changePasswordNavButton = document.getElementById('change-password-nav-button');
+const openInTabButton = document.getElementById('open-in-tab-button');
 
 const changePasswordContainer = document.getElementById('change-password-container');
 const currentPasswordInput = document.getElementById('current-password-input');
@@ -24,9 +25,28 @@ const cancelChangePasswordButton = document.getElementById('cancel-change-passwo
 const changePasswordError = document.getElementById('change-password-error');
 const changePasswordSuccess = document.getElementById('change-password-success');
 
+// Theme Elements
+const themeLightButton = document.getElementById('theme-light-button');
+const themeDarkButton = document.getElementById('theme-dark-button');
+const themeSystemButton = document.getElementById('theme-system-button');
+
+
 // --- Constants ---
 const PASSWORD_HASH_KEY = 'extension_password_hash';
 const IS_LOCKED_KEY = 'extension_is_locked';
+const INACTIVITY_TIMEOUT_MS = 1 * 60 * 1000; // 1 minute in milliseconds
+const LAST_ACTIVE_TIME_KEY = 'extension_last_active_time';
+
+const MAX_UNLOCK_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 2 * 60 * 1000; // 2 minutes
+const UNLOCK_ATTEMPTS_KEY = 'extension_unlock_attempts';
+const LOCKOUT_END_TIME_KEY = 'extension_lockout_end_time';
+
+const THEME_KEY = 'extension_current_theme'; // 'light', 'dark', 'system'
+
+
+// --- Inactivity Timer Variable ---
+let inactivityTimer = null;
 
 // --- Utility Functions ---
 async function hashPassword(password) {
@@ -38,240 +58,486 @@ async function hashPassword(password) {
 }
 
 function showError(element, message) {
-    element.textContent = message;
-    element.classList.remove('hidden');
+    if (element) {
+        element.textContent = message;
+        element.classList.remove('hidden');
+    } else {
+        console.error("Attempted to show error on a null element:", message);
+    }
 }
 
 function hideError(element) {
-    element.classList.add('hidden');
-    element.textContent = '';
+    if (element) {
+        element.classList.add('hidden');
+        element.textContent = '';
+    }
 }
 
-// --- Core Logic ---
-async function loadDashboard() {
-    hideError(lockError);
-    lockScreenContainer.classList.add('hidden');
-    changePasswordContainer.classList.add('hidden');
-    dashboardWrapper.classList.remove('hidden');
-    initialLoader.classList.add('hidden'); // Hide loader once dashboard is ready
 
-    // Check if dashboard script is already loaded
-    if (!document.querySelector('script[src="extension-dashboard.js"]')) {
-        const script = document.createElement('script');
-        script.src = 'extension-dashboard.js';
-        script.type = 'module';
-        document.body.appendChild(script);
+// --- Activity and Timer Functions ---
+function recordActivity() {
+    if (mainAppContent && !mainAppContent.classList.contains('hidden')) {
+        const now = Date.now();
+        chrome.storage.local.set({ [LAST_ACTIVE_TIME_KEY]: now });
+        resetInactivityTimer();
     }
+}
+
+function resetInactivityTimer() {
+    if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+    }
+    if (mainAppContent && !mainAppContent.classList.contains('hidden')) {
+        inactivityTimer = setTimeout(() => {
+            console.log('Inactivity timeout reached. Locking extension.');
+            handleLockExtension();
+        }, INACTIVITY_TIMEOUT_MS);
+    }
+}
+
+function stopInactivityTimer() {
+    if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = null;
+    }
+}
+
+// --- Theme Functions ---
+function applyTheme(theme) {
+    const body = document.body;
+    body.classList.remove('light-theme', 'dark-theme'); // Clear existing theme classes
+
+    let actualTheme = theme;
+    if (theme === 'system') {
+        actualTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    if (actualTheme === 'dark') {
+        body.classList.add('dark-theme');
+    } else {
+        body.classList.add('light-theme'); // Default to light
+    }
+
+    // Update button active states
+    if (themeLightButton) themeLightButton.classList.toggle('active', theme === 'light');
+    if (themeDarkButton) themeDarkButton.classList.toggle('active', theme === 'dark');
+    if (themeSystemButton) themeSystemButton.classList.toggle('active', theme === 'system');
+
+    console.log(`Applied theme: ${theme} (resolved to: ${actualTheme})`);
+}
+
+function setThemePreference(theme) {
+    chrome.storage.local.set({ [THEME_KEY]: theme }, () => {
+        applyTheme(theme);
+        console.log('Theme preference saved:', theme);
+    });
+}
+
+function initializeTheme() {
+    chrome.storage.local.get([THEME_KEY], (result) => {
+        const preferredTheme = result[THEME_KEY] || 'system'; // Default to system
+        applyTheme(preferredTheme);
+    });
+
+    // Listen for system theme changes if 'system' is the current preference
+    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    function handleSystemThemeChange(event) {
+        chrome.storage.local.get([THEME_KEY], (result) => {
+            if ((result[THEME_KEY] || 'system') === 'system') {
+                console.log('System theme changed, re-applying.');
+                applyTheme('system');
+            }
+        });
+    }
+    
+    // Modern way to add listener
+    if (darkModeMediaQuery.addEventListener) {
+        darkModeMediaQuery.addEventListener('change', handleSystemThemeChange);
+    } else if (darkModeMediaQuery.addListener) { // Fallback for older browsers (less likely needed in extensions)
+        darkModeMediaQuery.addListener(handleSystemThemeChange);
+    }
+}
+
+
+// --- Core Logic ---
+function showMainApp() {
+    if (lockError && lockError.dataset.isLockoutMessage === 'true') {
+        hideError(lockError);
+        delete lockError.dataset.isLockoutMessage;
+    }
+    if (passwordInput) passwordInput.disabled = false;
+    if (unlockButton) unlockButton.disabled = false;
+    if (setPasswordButton) setPasswordButton.disabled = false;
+
+    hideError(lockError);
+    if (lockScreenContainer) lockScreenContainer.classList.add('hidden');
+    if (changePasswordContainer) changePasswordContainer.classList.add('hidden');
+    if (mainAppContent) mainAppContent.classList.remove('hidden');
+    if (initialLoader) initialLoader.classList.add('hidden');
+
+    console.log('Showing main application content.');
+    resetInactivityTimer();
 }
 
 function showLockScreen(isInitialSetup = false) {
-    dashboardWrapper.classList.add('hidden');
-    changePasswordContainer.classList.add('hidden');
-    lockScreenContainer.classList.remove('hidden');
-    initialLoader.classList.add('hidden'); // Hide loader, show lock screen
+    if (mainAppContent) mainAppContent.classList.add('hidden');
+    if (changePasswordContainer) changePasswordContainer.classList.add('hidden');
+    if (lockScreenContainer) lockScreenContainer.classList.remove('hidden');
+    if (initialLoader) initialLoader.classList.add('hidden');
 
-    passwordInput.value = '';
-    confirmPasswordInput.value = '';
-    hideError(lockError);
+    if (passwordInput) passwordInput.value = '';
+    if (confirmPasswordInput) confirmPasswordInput.value = '';
+
+    if (passwordInput) passwordInput.disabled = false;
+    if (unlockButton) unlockButton.disabled = false;
+    if (setPasswordButton) setPasswordButton.disabled = false;
 
     if (isInitialSetup) {
-        lockTitle.textContent = 'Set Password';
-        lockSubtitle.classList.remove('hidden');
-        unlockButton.classList.add('hidden');
-        setPasswordButton.classList.remove('hidden');
-        confirmPasswordInput.classList.remove('hidden');
+        if (lockTitle) lockTitle.textContent = 'Set Password';
+        if (lockSubtitle) lockSubtitle.classList.remove('hidden');
+        if (unlockButton) unlockButton.classList.add('hidden');
+        if (setPasswordButton) setPasswordButton.classList.remove('hidden');
+        if (confirmPasswordInput) confirmPasswordInput.classList.remove('hidden');
+        hideError(lockError);
     } else {
-        lockTitle.textContent = 'Unlock Extension';
-        lockSubtitle.classList.add('hidden');
-        unlockButton.classList.remove('hidden');
-        setPasswordButton.classList.add('hidden');
-        confirmPasswordInput.classList.add('hidden');
+        if (lockTitle) lockTitle.textContent = 'Unlock Extension';
+        if (lockSubtitle) lockSubtitle.classList.add('hidden');
+        if (unlockButton) unlockButton.classList.remove('hidden');
+        if (setPasswordButton) setPasswordButton.classList.add('hidden');
+        if (confirmPasswordInput) confirmPasswordInput.classList.add('hidden');
+
+        chrome.storage.local.get([LOCKOUT_END_TIME_KEY, UNLOCK_ATTEMPTS_KEY], (result) => {
+            const lockoutEndTime = result[LOCKOUT_END_TIME_KEY] || 0;
+            const attempts = result[UNLOCK_ATTEMPTS_KEY] || 0;
+            const currentTime = Date.now();
+
+            if (lockoutEndTime > currentTime) {
+                const timeLeftMs = lockoutEndTime - currentTime;
+                const minutesLeft = Math.ceil(timeLeftMs / (1000 * 60));
+                const secondsLeft = Math.ceil(timeLeftMs / 1000);
+                let timeString = (minutesLeft > 0) ? `about ${minutesLeft} minute(s)` : `${secondsLeft} second(s)`;
+
+                showError(lockError, `Too many incorrect attempts. Please try again in ${timeString}.`);
+                if (lockError) lockError.dataset.isLockoutMessage = 'true'; // Ensure lockError exists
+                if (passwordInput) passwordInput.disabled = true;
+                if (unlockButton) unlockButton.disabled = true;
+                if (setPasswordButton) setPasswordButton.disabled = true;
+
+                setTimeout(() => showLockScreen(false), Math.min(timeLeftMs + 500, 1000));
+            } else {
+                if (lockError && lockError.dataset.isLockoutMessage === 'true') {
+                    hideError(lockError);
+                    delete lockError.dataset.isLockoutMessage;
+                }
+                if (passwordInput) passwordInput.disabled = false;
+                if (unlockButton) unlockButton.disabled = false;
+                if (setPasswordButton) setPasswordButton.disabled = false;
+                if (result.hasOwnProperty(LOCKOUT_END_TIME_KEY) && attempts >= MAX_UNLOCK_ATTEMPTS) {
+                    chrome.storage.local.remove([UNLOCK_ATTEMPTS_KEY, LOCKOUT_END_TIME_KEY]);
+                }
+            }
+        });
     }
+    stopInactivityTimer();
 }
 
 function showChangePasswordScreen() {
-    dashboardWrapper.classList.add('hidden');
-    lockScreenContainer.classList.add('hidden');
-    changePasswordContainer.classList.remove('hidden');
-    currentPasswordInput.value = '';
-    newPasswordInput.value = '';
-    confirmNewPasswordInput.value = '';
+    if (mainAppContent) mainAppContent.classList.add('hidden');
+    if (lockScreenContainer) lockScreenContainer.classList.add('hidden');
+    if (changePasswordContainer) changePasswordContainer.classList.remove('hidden');
+
+    if (currentPasswordInput) currentPasswordInput.value = '';
+    if (newPasswordInput) newPasswordInput.value = '';
+    if (confirmNewPasswordInput) confirmNewPasswordInput.value = '';
     hideError(changePasswordError);
-    hideError(changePasswordSuccess);
+    if (changePasswordSuccess) { // Ensure element exists
+      changePasswordSuccess.classList.add('hidden'); // Hide success message on screen show
+      changePasswordSuccess.textContent = '';
+    }
+    stopInactivityTimer();
 }
 
+// --- Function to handle opening in new tab ---
+function handleOpenInTab() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isAlreadyTab = urlParams.get('context') === 'tab';
+
+    if (isAlreadyTab && openInTabButton) {
+        openInTabButton.disabled = true;
+        openInTabButton.textContent = "Already in Tab";
+        return;
+    }
+    
+    const extensionPageUrl = chrome.runtime.getURL('popup.html?context=tab');
+    chrome.tabs.create({ url: extensionPageUrl }, (newTab) => {
+        console.log('Extension opened in new tab:', newTab.id);
+        if (!isAlreadyTab) {
+            window.close(); // Close the popup only if it's not already a tab
+        }
+    });
+}
+
+
 async function handleSetPassword() {
+    if (!passwordInput || !confirmPasswordInput) return;
     const pass = passwordInput.value;
     const confirmPass = confirmPasswordInput.value;
 
-    if (!pass) {
-        showError(lockError, 'Password cannot be empty.');
-        return;
-    }
-    if (pass !== confirmPass) {
-        showError(lockError, 'Passwords do not match.');
-        return;
-    }
-    if (pass.length < 6) { // Basic validation
-        showError(lockError, 'Password must be at least 6 characters.');
-        return;
-    }
+    hideError(lockError); // Hide previous errors
+
+    if (!pass) return showError(lockError, 'Password cannot be empty.');
+    if (pass !== confirmPass) return showError(lockError, 'Passwords do not match.');
+    if (pass.length < 6) return showError(lockError, 'Password must be at least 6 characters.');
 
     const hashedPassword = await hashPassword(pass);
-    chrome.storage.local.set({ [PASSWORD_HASH_KEY]: hashedPassword, [IS_LOCKED_KEY]: false }, () => {
-        console.log('Password set and extension unlocked.');
-        loadDashboard();
+    chrome.storage.local.remove([UNLOCK_ATTEMPTS_KEY, LOCKOUT_END_TIME_KEY], () => {
+        chrome.storage.local.set({ [PASSWORD_HASH_KEY]: hashedPassword, [IS_LOCKED_KEY]: false, [LAST_ACTIVE_TIME_KEY]: Date.now() }, () => {
+            console.log('Password set and extension unlocked.');
+            showMainApp();
+        });
     });
 }
 
 async function handleUnlock() {
+    if (!passwordInput || passwordInput.disabled) return;
     const pass = passwordInput.value;
-    if (!pass) {
-        showError(lockError, 'Please enter your password.');
-        return;
-    }
+    
+    hideError(lockError); // Hide previous errors
+    if (!pass) return showError(lockError, 'Please enter your password.');
 
-    chrome.storage.local.get([PASSWORD_HASH_KEY], async (result) => {
+    chrome.storage.local.get([PASSWORD_HASH_KEY, UNLOCK_ATTEMPTS_KEY, LOCKOUT_END_TIME_KEY], async (result) => {
         const storedHash = result[PASSWORD_HASH_KEY];
-        if (!storedHash) { // Should not happen if not initial setup
-            showError(lockError, 'Error: Password not set. Please contact support or reset.');
+        let attempts = result[UNLOCK_ATTEMPTS_KEY] || 0;
+        const lockoutEndTime = result[LOCKOUT_END_TIME_KEY] || 0;
+        const currentTime = Date.now();
+
+        if (lockoutEndTime > currentTime) {
+            const timeLeftMs = lockoutEndTime - currentTime;
+            const minutesLeft = Math.ceil(timeLeftMs / (1000 * 60));
+            showError(lockError, `Too many incorrect attempts. Please try again in about ${minutesLeft} minute(s).`);
+            if (lockError) lockError.dataset.isLockoutMessage = 'true';
             return;
         }
+        if (!storedHash) { // Should ideally not happen if setup flow is correct
+            showError(lockError, 'Error: Password not set. Please set up a password.');
+            // Potentially force to set password screen if this state is reached improperly
+            // showLockScreen(true); 
+            return;
+        }
+
+
         const inputHash = await hashPassword(pass);
         if (inputHash === storedHash) {
-            chrome.storage.local.set({ [IS_LOCKED_KEY]: false }, () => {
-                console.log('Extension unlocked.');
-                loadDashboard();
+            chrome.storage.local.remove([UNLOCK_ATTEMPTS_KEY, LOCKOUT_END_TIME_KEY], () => {
+                chrome.storage.local.set({ [IS_LOCKED_KEY]: false, [LAST_ACTIVE_TIME_KEY]: Date.now() }, () => {
+                    console.log('Extension unlocked.');
+                    showMainApp();
+                });
             });
         } else {
-            showError(lockError, 'Incorrect password.');
+            attempts++;
+            if (passwordInput) passwordInput.value = ''; // Clear password field
+            if (attempts >= MAX_UNLOCK_ATTEMPTS) {
+                const newLockoutEndTime = Date.now() + LOCKOUT_DURATION_MS;
+                showError(lockError, `Too many incorrect attempts. Please try again in about ${Math.ceil(LOCKOUT_DURATION_MS / (1000 * 60))} minutes.`);
+                if (lockError) lockError.dataset.isLockoutMessage = 'true';
+                chrome.storage.local.set({ [UNLOCK_ATTEMPTS_KEY]: attempts, [LOCKOUT_END_TIME_KEY]: newLockoutEndTime }, () => {
+                    console.log(`Max attempts reached. Locked out until ${new Date(newLockoutEndTime).toLocaleTimeString()}`);
+                    showLockScreen(false); // Re-render lock screen to show lockout
+                });
+            } else {
+                showError(lockError, `Incorrect password. ${MAX_UNLOCK_ATTEMPTS - attempts} attempt(s) remaining.`);
+                chrome.storage.local.set({ [UNLOCK_ATTEMPTS_KEY]: attempts });
+            }
         }
     });
 }
 
 function handleLockExtension() {
     chrome.storage.local.set({ [IS_LOCKED_KEY]: true }, () => {
-        console.log('Extension locked.');
+        console.log('Extension locked by user or timeout.');
         showLockScreen();
     });
 }
 
 async function handleChangePassword() {
+    if (!currentPasswordInput || !newPasswordInput || !confirmNewPasswordInput || !changePasswordError || !changePasswordSuccess) return;
+    
     const currentPass = currentPasswordInput.value;
     const newPass = newPasswordInput.value;
     const confirmNewPass = confirmNewPasswordInput.value;
 
     hideError(changePasswordError);
-    hideError(changePasswordSuccess);
+    changePasswordSuccess.classList.add('hidden'); // Hide success message initially
 
-    if (!currentPass || !newPass || !confirmNewPass) {
-        showError(changePasswordError, 'All fields are required.');
-        return;
-    }
-    if (newPass !== confirmNewPass) {
-        showError(changePasswordError, 'New passwords do not match.');
-        return;
-    }
-    if (newPass.length < 6) {
-        showError(changePasswordError, 'New password must be at least 6 characters.');
-        return;
-    }
+    if (!currentPass || !newPass || !confirmNewPass) return showError(changePasswordError, 'All fields are required.');
+    if (newPass !== confirmNewPass) return showError(changePasswordError, 'New passwords do not match.');
+    if (newPass.length < 6) return showError(changePasswordError, 'New password must be at least 6 characters.');
 
     chrome.storage.local.get([PASSWORD_HASH_KEY], async (result) => {
         const storedHash = result[PASSWORD_HASH_KEY];
+        if (!storedHash) { // Should not happen if app is working correctly
+            showError(changePasswordError, "Error: No current password is set.");
+            return;
+        }
         const currentInputHash = await hashPassword(currentPass);
 
-        if (currentInputHash !== storedHash) {
-            showError(changePasswordError, 'Incorrect current password.');
-            return;
-        }
-
-        if (currentPass === newPass) {
-            showError(changePasswordError, 'New password cannot be the same as the current password.');
-            return;
-        }
+        if (currentInputHash !== storedHash) return showError(changePasswordError, 'Incorrect current password.');
+        if (currentPass === newPass) return showError(changePasswordError, 'New password cannot be the same as the current password.');
 
         const newHashedPassword = await hashPassword(newPass);
-        chrome.storage.local.set({ [PASSWORD_HASH_KEY]: newHashedPassword }, () => {
+        chrome.storage.local.set({ [PASSWORD_HASH_KEY]: newHashedPassword, [LAST_ACTIVE_TIME_KEY]: Date.now() }, () => {
             changePasswordSuccess.textContent = 'Password changed successfully!';
             changePasswordSuccess.classList.remove('hidden');
+            // Clear fields
+            currentPasswordInput.value = '';
+            newPasswordInput.value = '';
+            confirmNewPasswordInput.value = '';
             console.log('Password changed.');
-            // Optionally, auto-navigate back or provide a button to go back
             setTimeout(() => {
-                // if still on change password screen, go back to dashboard
-                if (!changePasswordContainer.classList.contains('hidden')) {
-                    loadDashboard();
+                // Check if still on change password screen before navigating
+                if (changePasswordContainer && !changePasswordContainer.classList.contains('hidden')) {
+                     showMainApp();
                 }
             }, 2000);
         });
     });
 }
 
-
 // --- Initialization ---
 async function initialize() {
-    // !!! Add a check here too, right at the start of initialize
-    if (!initialLoader) {
-        console.error("CRITICAL: initial-loader element NOT FOUND at the start of initialize()!");
-        // Display an error or halt
-        document.body.innerHTML = "<p style='color:red; font-weight:bold;'>Error: UI components missing (initial-loader). Please report this.</p>";
+    // Added theme buttons to the check
+    if (!initialLoader || !lockScreenContainer || !mainAppContent || !changePasswordContainer || !lockError || 
+        !passwordInput || !unlockButton || !setPasswordButton || !openInTabButton ||
+        !themeLightButton || !themeDarkButton || !themeSystemButton) {
+        console.error("Auth.js: One or more critical UI elements are missing from the DOM. Aborting initialization.");
+        if (document.body) {
+             document.body.innerHTML = "<p style='color:red; font-weight:bold;'>Error: Core UI elements missing. Extension cannot start.</p>";
+        }
         return;
     }
-    // The init-theme.js runs first, setting the theme.
-    // Now we decide what to show based on lock state.
-    chrome.storage.local.get([PASSWORD_HASH_KEY, IS_LOCKED_KEY], (result) => {
+    
+    initializeTheme(); // Initialize theme first so UI renders with correct theme from start
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const isFullTab = urlParams.get('context') === 'tab';
+    if (isFullTab) {
+        document.body.classList.add('full-tab-mode');
+        if (openInTabButton) {
+            openInTabButton.style.display = 'none';
+        }
+    }
+
+    chrome.storage.local.get([
+        PASSWORD_HASH_KEY, IS_LOCKED_KEY, LAST_ACTIVE_TIME_KEY, LOCKOUT_END_TIME_KEY
+    ], (result) => {
         const passwordHash = result[PASSWORD_HASH_KEY];
-        const isLocked = result.hasOwnProperty(IS_LOCKED_KEY) ? result[IS_LOCKED_KEY] : true; // Default to locked
+        let isLocked = result.hasOwnProperty(IS_LOCKED_KEY) ? result[IS_LOCKED_KEY] : true;
+        const lastActiveTime = result[LAST_ACTIVE_TIME_KEY] || 0;
+        const lockoutEndTime = result[LOCKOUT_END_TIME_KEY] || 0;
+        const currentTime = Date.now();
+
+        if (lockoutEndTime > currentTime) {
+            console.log('Extension is currently in password attempt lockout period.');
+            isLocked = true; // Ensure it's locked if in lockout
+        } else if (passwordHash && !isLocked) { // Only check inactivity if password is set and not already locked
+            if ((currentTime - lastActiveTime) > INACTIVITY_TIMEOUT_MS) {
+                console.log('Extension was inactive for too long. Forcing lock.');
+                isLocked = true;
+                chrome.storage.local.set({ [IS_LOCKED_KEY]: true }); // Persist this forced lock
+            }
+        }
+
 
         if (!passwordHash) {
-            // No password set, initial setup
             console.log('No password found. Prompting for setup.');
             showLockScreen(true);
         } else if (isLocked) {
             console.log('Extension is locked. Prompting for password.');
             showLockScreen(false);
         } else {
-            // Password set and not locked
-            console.log('Extension is unlocked. Loading dashboard.');
-            loadDashboard();
+            console.log('Extension is unlocked. Loading main app.');
+            showMainApp();
         }
-        // Once decision is made, hide initial page loader if it wasn't already handled
-        initialLoader.classList.add('hidden');
+        if(initialLoader) initialLoader.classList.add('hidden');
     });
 }
 
-// --- Event Listeners ---
-setPasswordButton.addEventListener('click', handleSetPassword);
-unlockButton.addEventListener('click', handleUnlock);
-lockExtensionButton.addEventListener('click', handleLockExtension);
+function setupEventListeners() {
+    if (setPasswordButton) setPasswordButton.addEventListener('click', handleSetPassword);
+    if (unlockButton) unlockButton.addEventListener('click', handleUnlock);
+    if (openInTabButton) openInTabButton.addEventListener('click', handleOpenInTab);
+    
+    if (lockExtensionButton) lockExtensionButton.addEventListener('click', handleLockExtension);
+    else console.warn("Lock Extension button not found for event listener");
 
-changePasswordNavButton.addEventListener('click', () => {
-    showChangePasswordScreen();
-});
+    if (changePasswordNavButton) changePasswordNavButton.addEventListener('click', showChangePasswordScreen);
+    else console.warn("Change Password Nav button not found for event listener");
 
-submitChangePasswordButton.addEventListener('click', handleChangePassword);
-cancelChangePasswordButton.addEventListener('click', () => {
-    hideError(changePasswordError);
-    hideError(changePasswordSuccess);
-    loadDashboard(); // Go back to the dashboard view
-});
+    if (submitChangePasswordButton) submitChangePasswordButton.addEventListener('click', handleChangePassword);
+    if (cancelChangePasswordButton) cancelChangePasswordButton.addEventListener('click', () => {
+        hideError(changePasswordError);
+        if(changePasswordSuccess) changePasswordSuccess.classList.add('hidden');
+        showMainApp();
+    });
 
-// Allow Enter key submission
-passwordInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        if (!unlockButton.classList.contains('hidden')) {
+    if (passwordInput) passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && unlockButton && !unlockButton.classList.contains('hidden') && !passwordInput.disabled) {
             handleUnlock();
         }
-    }
-});
-confirmPasswordInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        if (!setPasswordButton.classList.contains('hidden')) {
+    });
+    if (confirmPasswordInput) confirmPasswordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && setPasswordButton && !setPasswordButton.classList.contains('hidden') && !confirmPasswordInput.disabled) {
             handleSetPassword();
         }
-    }
+    });
+
+    // Theme button listeners
+    if (themeLightButton) themeLightButton.addEventListener('click', () => setThemePreference('light'));
+    if (themeDarkButton) themeDarkButton.addEventListener('click', () => setThemePreference('dark'));
+    if (themeSystemButton) themeSystemButton.addEventListener('click', () => setThemePreference('system'));
+
+    document.body.addEventListener('mousemove', recordActivity);
+    document.body.addEventListener('keypress', recordActivity);
+    document.body.addEventListener('click', recordActivity, true); // Use capture for broader activity detection
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            // Re-check theme in case system theme changed while popup was hidden
+            chrome.storage.local.get([THEME_KEY], (result) => {
+                const preferredTheme = result[THEME_KEY] || 'system';
+                applyTheme(preferredTheme); // Re-apply to catch system changes
+            });
+
+            if (mainAppContent && !mainAppContent.classList.contains('hidden')) {
+                recordActivity(); // If app is visible, record activity
+            } else { // If lock screen is visible
+                chrome.storage.local.get([LOCKOUT_END_TIME_KEY], (result) => {
+                    const lockoutEndTime = result[LOCKOUT_END_TIME_KEY] || 0;
+                    if (lockoutEndTime <= Date.now() && passwordInput && passwordInput.disabled) {
+                         console.log("Popup became visible, lockout expired, re-rendering lock screen.");
+                         showLockScreen(false); // Refresh lock screen state
+                    }
+                });
+            }
+        } else { // Popup became hidden
+            // No specific action needed here for theme, but good for other logic if necessary
+        }
+    });
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    initialize().then(() => {
+        setupEventListeners();
+    }).catch(error => {
+        console.error("Initialization promise rejected:", error);
+        if (document.body && initialLoader && initialLoader.parentElement) {
+            initialLoader.classList.add('hidden');
+            document.body.innerHTML = "<p style='color:red;'>Critical error during extension startup. Please try again.</p>";
+        } else if (document.body) {
+            document.body.innerHTML = "<p style='color:red;'>Critical error during extension startup (elements missing). Please try again.</p>";
+        }
+    });
 });
-
-
-// Start the process
-initialize();

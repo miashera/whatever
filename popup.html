@@ -8,22 +8,10 @@
 
 <body>
     <div id="initial-loader" class="loader-container">
-        <p>Loading...</p> 
-    </div>
-    <h1>Extension Privacy Analyzer</h1>
-
-    <div>
-        <label for="analysisToggle">Enable Privacy Analysis:</label>
-        <input type="checkbox" id="analysisToggle">
+        <p>Loading...</p>
     </div>
 
-    <button id="analyzeButton">Analyze Extensions</button>
-
-    <h2>Analysis Report</h2>
-    <div id="reportContainer">
-        <p>Enable analysis and click "Analyze Extensions" to see the report.</p>
-    </div>
-    <!-- Lock Screen / Set Password Screen -->
+    <!-- Lock Screen / Set Password Screen  -->
     <div id="lock-screen-container" class="lock-screen-container hidden">
         <h3 id="lock-title">Unlock Extension</h3>
         <p id="lock-subtitle" class="hidden">Please set a password to secure your extension.</p>
@@ -34,22 +22,50 @@
         <button id="set-password-button" class="hidden">Set Password</button>
     </div>
 
-    <!-- Main Dashboard Content (initially hidden if lock is active) -->
-    <div id="dashboard-wrapper" class="hidden">
-        <div class="dashboard-controls">
+    <!-- Main Application Content (Shown after unlock) -->
+    <div id="main-app-content" class="hidden">
+        <h1>Extension Privacy Analyzer</h1>
+        <hr class="separator">
+
+        <div class="app-controls">
+            <button id="open-in-tab-button">Open in New Tab</button> <!-- NEW BUTTON -->
+        </div>
+
+        <div>
+            <label for="analysisToggle">Enable Privacy Analysis:</label>
+            <input type="checkbox" id="analysisToggle">
+        </div>
+
+        <button id="analyzeButton">Analyze Extensions</button>
+        <button id="downloadFullReportButton">Download Full Report (TXT)</button>
+
+        <h2>Analysis Report</h2>
+        <div id="reportContainer">
+            <p>Enable analysis and click "Analyze Extensions" to see the report.</p>
+        </div>
+        <div class="theme-selector-container">
+            <h4>Appearance</h4>
+            <div class="theme-buttons">
+                <button id="theme-light-button" data-theme="light">Light</button>
+                <button id="theme-dark-button" data-theme="dark">Dark</button>
+                <button id="theme-system-button" data-theme="system">System</button>
+            </div>
+        </div>
+
+        <hr class="separator"> <!-- Optional visual separator -->
+
+        <div class="app-controls">
             <button id="change-password-nav-button">Change Password</button>
             <button id="lock-extension-button">Lock Extension</button>
         </div>
-        <div id="root">
-            <!-- extension-dashboard.js will populate this -->
-        </div>
     </div>
 
-    <!-- Change Password Screen -->
+    <!-- Change Password Screen (Stays the same, but its visibility is controlled by auth.js) -->
     <div id="change-password-container" class="settings-container hidden">
         <h3>Change Password</h3>
         <div id="change-password-error" class="error-message hidden"></div>
-        <div id="change-password-success" class="error-message hidden" style="color: hsl(var(--constructive));"></div>
+        <div id="change-password-success" class="error-message hidden" style="color: green;"></div>
+        <!-- Changed color -->
         <input type="password" id="current-password-input" placeholder="Current Password" />
         <input type="password" id="new-password-input" placeholder="New Password" />
         <input type="password" id="confirm-new-password-input" placeholder="Confirm New Password" />
@@ -57,10 +73,7 @@
         <button id="cancel-change-password-button">Cancel</button>
     </div>
 
-    <!-- IMPORTANT: Defer loading of extension-dashboard.js -->
-    <!-- <script src="extension-dashboard.js" type="module"></script> -->
-    <!-- We will load it programmatically after unlock -->
-    <script src="auth.js" type="module"></script> <!-- New file for auth logic -->
+    <script src="auth.js" type="module"></script>
     <script src="popup.js" type="module"></script>
 </body>
 

@@ -1,68 +1,422 @@
-body {
-    font-family: sans-serif;
-    padding: 10px;
-    width: 400px;
+:root {
+    --bg-color: #ffffff;
+    --text-color: #212529;
+    --text-color-muted: #6c757d;
+    --primary-color: #007bff;
+    --primary-text-color: #ffffff;
+    --secondary-bg-color: #f8f9fa;
+    --border-color: #dee2e6;
+    --input-bg-color: #ffffff;
+    --input-border-color: #ced4da;
+    --input-focus-border-color: #80bdff;
+    --input-focus-box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    --error-bg-color: #f8d7da;
+    --error-text-color: #721c24;
+    --error-border-color: #f5c6cb;
+    --success-bg-color: #d4edda;
+    --success-text-color: #155724;
+    --success-border-color: #c3e6cb;
+    --link-color: #007bff;
+    --code-bg-color: #e9ecef; /* Lighter for light theme */
+    --code-text-color: #212529;
+    --separator-color: #ced4da;
+    --button-disabled-bg: #adb5bd;
+    --button-disabled-text: #6c757d;
+    --loader-bg-color: #f9f9f9;
+    --container-bg-color: #f8f9fa;
+    --container-border-color: #dee2e6;
+    --report-container-bg: #ffffff;
+    --report-container-border: #dee2e6;
+    --h1-color: #333;
+    --h2-color: #333;
+    --h3-color: #333; /* Default h3, specific ones might override */
+    --h4-color: #495057;
+
+    /* Severity colors - these are generally okay for both themes but could be adjusted */
+    --severity-critical-color: #dc3545;
+    --severity-high-color: #fd7e14;
+    --severity-medium-color: #ffc107;
+    --severity-low-color: #28a745;
+    --severity-informational-color: #17a2b8;
+
+    --open-in-tab-button-bg: #6c757d; /* Greyish for light theme */
+    --open-in-tab-button-hover-bg: #5a6268;
 }
 
-h1,
+body.dark-theme {
+    --bg-color: #1a1a1b; /* Darker background */
+    --text-color: #d7dadc; /* Light text */
+    --text-color-muted: #818384;
+    --primary-color: #0079d3; /* Slightly adjusted primary */
+    --primary-text-color: #ffffff;
+    --secondary-bg-color: #272729; /* Dark secondary background */
+    --border-color: #343536; /* Lighter border for dark mode */
+    --input-bg-color: #272729;
+    --input-border-color: #343536;
+    --input-focus-border-color: #0079d3;
+    --input-focus-box-shadow: 0 0 0 0.2rem rgba(0,121,211,.25);
+    --error-bg-color: #5c1a1f;
+    --error-text-color: #f8d7da;
+    --error-border-color: #8c2b33;
+    --success-bg-color: #1a4b24;
+    --success-text-color: #d4edda;
+    --success-border-color: #2a7c3d;
+    --link-color: #4f9eed; /* Lighter link color */
+    --code-bg-color: #2a2a2b; /* Darker code bg */
+    --code-text-color: #d7dadc;
+    --separator-color: #343536;
+    --button-disabled-bg: #4a4a4a;
+    --button-disabled-text: #888888;
+    --loader-bg-color: #272729;
+    --container-bg-color: #1e1e1e;
+    --container-border-color: #343536;
+    --report-container-bg: #1e1e1e;
+    --report-container-border: #343536;
+    --h1-color: #e0e0e0;
+    --h2-color: #d7dadc;
+    --h3-color: #d0d0d0;
+    --h4-color: #c0c0c0;
+
+    --open-in-tab-button-bg: #48494a; /* Darker grey for dark theme */
+    --open-in-tab-button-hover-bg: #5a5b5c;
+}
+
+body {
+    font-family: sans-serif;
+    padding: 20px;
+    width: 550px;
+    min-height: 400px;
+    box-sizing: border-box;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* --- Styles for Full Tab Mode --- */
+body.full-tab-mode {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100vh;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: var(--secondary-bg-color); /* Use variable */
+}
+
+body.full-tab-mode #main-app-content,
+body.full-tab-mode .lock-screen-container,
+body.full-tab-mode .settings-container {
+    width: 100%;
+    max-width: 900px;
+    margin-top: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    background-color: var(--bg-color); /* Ensure these containers use main bg */
+}
+
+body.full-tab-mode .loader-container {
+    width: 100%;
+    max-width: 900px;
+    background-color: var(--bg-color); /* Ensure it has a background */
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+#downloadFullReportButton {
+    margin-left: 10px;
+    background-color: var(--severity-informational-color);
+}
+#downloadFullReportButton:hover {
+    opacity: 0.8;
+}
+
+.individual-download-btn {
+    background-color: var(--severity-low-color);
+    color: white; /* Assuming light text on this green */
+    padding: 5px 10px;
+    font-size: 13px;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+    margin-left: 15px;
+    margin-top: 5px;
+    display: inline-block;
+    vertical-align: middle;
+}
+.individual-download-btn:hover {
+    opacity: 0.8;
+}
+
+h1 {
+    color: var(--h1-color);
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
 h2 {
-    color: #333;
+    color: var(--h2-color);
+    font-size: 20px;
+    margin-top: 25px;
+    margin-bottom: 15px;
+}
+
+h3 {
+    color: var(--h3-color);
+    font-size: 18px;
+}
+.lock-screen-container h3,
+.settings-container h3 {
+    color: var(--h4-color); /* Or a specific var if needed */
+}
+
+
+input[type="text"],
+input[type="password"],
+button {
+    padding: 10px 12px;
+    font-size: 15px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+    width: 100%;
+    border-radius: 4px;
+    color: var(--text-color); /* Text color for inputs */
+}
+
+input[type="text"],
+input[type="password"] {
+    border: 1px solid var(--input-border-color);
+    background-color: var(--input-bg-color);
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+    border-color: var(--input-focus-border-color);
+    box-shadow: var(--input-focus-box-shadow);
+    outline: none;
+    background-color: var(--input-bg-color); /* Maintain bg on focus */
+}
+
+
+button {
+    cursor: pointer;
+    background-color: var(--primary-color);
+    color: var(--primary-text-color);
+    border: none;
+    transition: background-color 0.15s ease-in-out, opacity 0.15s ease-in-out;
+}
+
+button:hover {
+    opacity: 0.85; /* Universal hover effect, can be overridden */
+}
+#open-in-tab-button {
+    background-color: var(--open-in-tab-button-bg);
+}
+#open-in-tab-button:hover {
+    background-color: var(--open-in-tab-button-hover-bg);
+    opacity: 1; /* Override general opacity hover if specific color change */
+}
+
+
+button:disabled {
+    background-color: var(--button-disabled-bg);
+    color: var(--button-disabled-text);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+label {
+    font-size: 15px;
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--text-color);
 }
 
 #reportContainer {
-    margin-top: 15px;
-    border: 1px solid #ccc;
-    padding: 10px;
-    max-height: 400px;
+    margin-top: 20px;
+    border: 1px solid var(--report-container-border);
+    padding: 15px;
+    max-height: 450px;
     overflow-y: auto;
+    font-size: 14px;
+    background-color: var(--report-container-bg);
+    border-radius: 4px;
 }
 
 .extension-report {
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px dashed #eee;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.extension-report:last-child {
+    border-bottom: none;
 }
 
 .extension-report h3 {
     margin-top: 0;
+    font-size: 18px;
+    color: var(--h3-color);
+}
+.extension-report code {
+    background-color: var(--code-bg-color);
+    color: var(--code-text-color);
+    padding: 2px 4px;
+    border-radius: 3px;
 }
 
-.permission-risk {
-    margin-left: 15px;
+
+.permission-risk { /* This class seems unused, if it exists it should use vars */
+    margin-left: 20px;
 }
 
-.severity-Critical {
-    color: red;
+.severity-critical, .severity-Critical {
+    color: var(--severity-critical-color);
     font-weight: bold;
 }
 
-.severity-High {
-    color: orange;
+.severity-high, .severity-High {
+    color: var(--severity-high-color);
 }
 
-.severity-Medium {
-    color: goldenrod;
+.severity-medium, .severity-Medium {
+    color: var(--severity-medium-color);
 }
 
-.severity-Low {
-    color: green;
+.severity-low, .severity-Low {
+    color: var(--severity-low-color);
 }
 
-.severity-Informational {
-    color: blue;
+.severity-informational, .severity-Informational {
+    color: var(--severity-informational-color);
 }
 
 .loader-container {
     display: flex;
-    /* Or block, depending on how auth.js shows/hides it */
     justify-content: center;
     align-items: center;
-    padding: 20px;
-    /* position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 10000; */
-    /* Uncomment and adjust fixed positioning above if you want a full-page loader initially */
+    padding: 30px;
+    font-size: 16px;
+    background-color: var(--loader-bg-color);
+    border-radius: 5px;
+    margin-top: 20px;
+    color: var(--text-color);
 }
 
-.loader-container.hidden {
+.loader-container.hidden,
+.hidden {
     display: none !important;
-    /* Ensure hidden class works */
+}
+
+.lock-screen-container,
+.settings-container {
+    padding: 25px;
+    border: 1px solid var(--container-border-color);
+    border-radius: 5px;
+    margin-top: 20px;
+    background-color: var(--container-bg-color);
+}
+
+.lock-screen-container h3, /* Already covered by general h3 */
+.settings-container h3 { /* Already covered by general h3 */
+    margin-top: 0;
+    font-size: 20px;
+    /* color: var(--h4-color); /* Using var(--h3-color) or var(--h4-color) as per general rules */
+}
+
+#change-password-success.error-message, /* For the specific success message */
+.success-message { /* General success message class */
+    color: var(--success-text-color);
+    background-color: var(--success-bg-color);
+    border-color: var(--success-border-color);
+}
+/* Make sure change-password-success in HTML has this class or the specific ID styling is applied */
+#change-password-success { /* If it keeps only "error-message" class, this will apply */
+    color: var(--success-text-color) !important; /* Important to override .error-message if structure is not changed */
+    background-color: var(--success-bg-color) !important;
+    border-color: var(--success-border-color) !important;
+}
+
+
+.error-message {
+    color: var(--error-text-color);
+    background-color: var(--error-bg-color);
+    border: 1px solid var(--error-border-color);
+    padding: 12px 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+
+hr.separator {
+    border: 0;
+    height: 1px;
+    background-color: var(--separator-color);
+    margin: 30px 0;
+}
+
+.app-controls {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid var(--separator-color);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.app-controls button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+}
+
+/* --- Theme Selector Styles --- */
+.theme-selector-container {
+    margin-top: 20px;
+    padding-bottom: 20px; /* Add padding if it's before a separator */
+    /* border-top: 1px solid var(--separator-color); */ /* Uncomment if it's the first item in a section */
+}
+
+.theme-selector-container h4 {
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--h4-color);
+    text-align: left; /* Or center if preferred */
+}
+
+.theme-buttons {
+    display: flex;
+    justify-content: space-around; /* Or 'flex-start' with margins */
+    gap: 10px;
+}
+
+.theme-buttons button {
+    flex-grow: 1; /* Make buttons share space equally */
+    padding: 8px 10px;
+    font-size: 14px;
+    background-color: var(--secondary-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    width: auto; /* Override general button width */
+}
+
+.theme-buttons button:hover {
+    background-color: var(--border-color); /* Use a subtle hover */
+    opacity: 1; /* Override default button hover opacity */
+}
+
+.theme-buttons button.active {
+    background-color: var(--primary-color);
+    color: var(--primary-text-color);
+    border-color: var(--primary-color);
+    font-weight: bold;
+}
+
+
+#lock-subtitle {
+    color: var(--text-color-muted);
 }
