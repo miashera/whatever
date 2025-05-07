@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Extension Privacy Analyzer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="initial-loader" class="loader-container">
+        <p>Loading...</p> 
+    </div>
+    <h1>Extension Privacy Analyzer</h1>
+
+    <div>
+        <label for="analysisToggle">Enable Privacy Analysis:</label>
+        <input type="checkbox" id="analysisToggle">
+    </div>
+
+    <button id="analyzeButton">Analyze Extensions</button>
+
+    <h2>Analysis Report</h2>
+    <div id="reportContainer">
+        <p>Enable analysis and click "Analyze Extensions" to see the report.</p>
+    </div>
+    <!-- Lock Screen / Set Password Screen -->
+    <div id="lock-screen-container" class="lock-screen-container hidden">
+        <h3 id="lock-title">Unlock Extension</h3>
+        <p id="lock-subtitle" class="hidden">Please set a password to secure your extension.</p>
+        <div id="lock-error" class="error-message hidden"></div>
+        <input type="password" id="password-input" placeholder="Enter Password" />
+        <input type="password" id="confirm-password-input" placeholder="Confirm Password" class="hidden" />
+        <button id="unlock-button">Unlock</button>
+        <button id="set-password-button" class="hidden">Set Password</button>
+    </div>
+
+    <!-- Main Dashboard Content (initially hidden if lock is active) -->
+    <div id="dashboard-wrapper" class="hidden">
+        <div class="dashboard-controls">
+            <button id="change-password-nav-button">Change Password</button>
+            <button id="lock-extension-button">Lock Extension</button>
+        </div>
+        <div id="root">
+            <!-- extension-dashboard.js will populate this -->
+        </div>
+    </div>
+
+    <!-- Change Password Screen -->
+    <div id="change-password-container" class="settings-container hidden">
+        <h3>Change Password</h3>
+        <div id="change-password-error" class="error-message hidden"></div>
+        <div id="change-password-success" class="error-message hidden" style="color: hsl(var(--constructive));"></div>
+        <input type="password" id="current-password-input" placeholder="Current Password" />
+        <input type="password" id="new-password-input" placeholder="New Password" />
+        <input type="password" id="confirm-new-password-input" placeholder="Confirm New Password" />
+        <button id="submit-change-password-button">Change Password</button>
+        <button id="cancel-change-password-button">Cancel</button>
+    </div>
+
+    <!-- IMPORTANT: Defer loading of extension-dashboard.js -->
+    <!-- <script src="extension-dashboard.js" type="module"></script> -->
+    <!-- We will load it programmatically after unlock -->
+    <script src="auth.js" type="module"></script> <!-- New file for auth logic -->
+    <script src="popup.js" type="module"></script>
+</body>
+
+</html>
