@@ -3,7 +3,6 @@
 // This is a simplified model. A true CVSS has many more factors.
 // We're focusing on the *potential impact* of a permission.
 const PERMISSION_RISK_PROFILES = {
-    // ... (your existing profiles here) ...
     "<all_urls>": { baseScore: 9.0, description: "Can access and modify data on ALL websites you visit. This is highly sensitive.", severity: "Critical" },
     "nativeMessaging": { baseScore: 9.5, description: "Can communicate with native applications on your computer, bypassing browser sandbox.", severity: "Critical" },
     "proxy": { baseScore: 9.0, description: "Can intercept and modify all your network traffic.", severity: "Critical" },
@@ -28,7 +27,7 @@ const PERMISSION_RISK_PROFILES = {
     "unknown": { baseScore: 1.0, description: "Standard or less common permission. Review its purpose if concerned.", severity: "Informational" }
 };
 
-// THIS IS THE IMPORTANT CHANGE: Add "export"
+
 export function getPermissionRisk(permissionString) {
     let riskProfile = PERMISSION_RISK_PROFILES[permissionString];
 
@@ -63,7 +62,3 @@ export function getPermissionRisk(permissionString) {
         recommendation: "Understand what this permission allows by checking the extension's documentation or its Chrome Web Store/Add-ons page. Less common permissions might still have privacy implications depending on how the extension uses them."
     };
 }
-
-// You might also want to export PERMISSION_RISK_PROFILES if you ever need it directly elsewhere
-// export { getPermissionRisk, PERMISSION_RISK_PROFILES }; // Use this if you need both
-// For now, just exporting getPermissionRisk is enough based on your current background.js

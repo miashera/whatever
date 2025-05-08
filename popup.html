@@ -4,77 +4,358 @@
 <head>
     <title>Extension Privacy Analyzer</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
+    <!-- Loading State -->
     <div id="initial-loader" class="loader-container">
+        <div class="spinner"></div>
         <p>Loading...</p>
     </div>
 
-    <!-- Lock Screen / Set Password Screen  -->
-    <div id="lock-screen-container" class="lock-screen-container hidden">
+    <!-- Lock Screen / Set Password Screen -->
+    <div id="lock-screen-container" class="card hidden">
         <h3 id="lock-title">Unlock Extension</h3>
-        <p id="lock-subtitle" class="hidden">Please set a password to secure your extension.</p>
+        <p id="lock-subtitle" class="text-muted hidden">Please set a password to secure your extension.</p>
         <div id="lock-error" class="error-message hidden"></div>
-        <input type="password" id="password-input" placeholder="Enter Password" />
-        <input type="password" id="confirm-password-input" placeholder="Confirm Password" class="hidden" />
-        <button id="unlock-button">Unlock</button>
-        <button id="set-password-button" class="hidden">Set Password</button>
+        <div class="form-group">
+            <div class="password-input-container">
+                <input type="password" id="password-input" placeholder="Enter Password" />
+                <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                    <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+            <div class="password-input-container">
+                <input type="password" id="confirm-password-input" placeholder="Confirm Password" class="hidden" />
+                <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                    <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="button-group">
+            <button id="unlock-button" class="primary">Unlock</button>
+            <button id="set-password-button" class="primary hidden">Set Password</button>
+        </div>
     </div>
 
-    <!-- Main Application Content (Shown after unlock) -->
+    <!-- Main Application Content -->
     <div id="main-app-content" class="hidden">
-        <h1>Extension Privacy Analyzer</h1>
-        <hr class="separator">
-
-        <div class="app-controls">
-            <button id="open-in-tab-button">Open in New Tab</button> <!-- NEW BUTTON -->
+        <div class="header">
+            <h1>Extension Privacy Analyzer</h1>
+            <button id="open-in-tab-button" class="secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Open in New Tab
+            </button>
         </div>
 
-        <div>
-            <label for="analysisToggle">Enable Privacy Analysis:</label>
-            <input type="checkbox" id="analysisToggle">
-        </div>
-
-        <button id="analyzeButton">Analyze Extensions</button>
-        <button id="downloadFullReportButton">Download Full Report (TXT)</button>
-
-        <h2>Analysis Report</h2>
-        <div id="reportContainer">
-            <p>Enable analysis and click "Analyze Extensions" to see the report.</p>
-        </div>
-        <div class="theme-selector-container">
-            <h4>Appearance</h4>
-            <div class="theme-buttons">
-                <button id="theme-light-button" data-theme="light">Light</button>
-                <button id="theme-dark-button" data-theme="dark">Dark</button>
-                <button id="theme-system-button" data-theme="system">System</button>
+        <div class="card">
+            <div class="card-header">
+                <h2>Privacy Analysis</h2>
+                <div class="toggle-container">
+                    <label for="analysisToggle">Enable Analysis</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="analysisToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="button-group">
+                <button id="analyzeButton" class="primary">Analyze Extensions</button>
+                <button id="downloadFullReportButton" class="secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download Full Report
+                </button>
             </div>
         </div>
 
-        <hr class="separator"> <!-- Optional visual separator -->
+        <div class="card">
+            <h2>Analysis Report</h2>
+            <div id="reportContainer">
+                <p class="text-muted">Enable analysis and click "Analyze Extensions" to see the report.</p>
+            </div>
+        </div>
 
-        <div class="app-controls">
-            <button id="change-password-nav-button">Change Password</button>
-            <button id="lock-extension-button">Lock Extension</button>
+        <div class="card theme-selector-container">
+            <h3>Appearance</h3>
+            <div class="theme-buttons">
+                <button id="theme-light-button" data-theme="light">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    Light
+                </button>
+                <button id="theme-dark-button" data-theme="dark">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    Dark
+                </button>
+                <button id="theme-system-button" data-theme="system">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                    System
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="button-group">
+                <button id="change-password-nav-button" class="secondary">Change Password</button>
+                <button id="lock-extension-button" class="secondary">Lock Extension</button>
+            </div>
         </div>
     </div>
 
-    <!-- Change Password Screen (Stays the same, but its visibility is controlled by auth.js) -->
-    <div id="change-password-container" class="settings-container hidden">
+    <!-- Change Password Screen -->
+    <div id="change-password-container" class="card hidden">
         <h3>Change Password</h3>
         <div id="change-password-error" class="error-message hidden"></div>
-        <div id="change-password-success" class="error-message hidden" style="color: green;"></div>
-        <!-- Changed color -->
-        <input type="password" id="current-password-input" placeholder="Current Password" />
-        <input type="password" id="new-password-input" placeholder="New Password" />
-        <input type="password" id="confirm-new-password-input" placeholder="Confirm New Password" />
-        <button id="submit-change-password-button">Change Password</button>
-        <button id="cancel-change-password-button">Cancel</button>
+        <div id="change-password-success" class="success-message hidden"></div>
+        <div class="form-group">
+            <div class="password-input-container">
+                <input type="password" id="current-password-input" placeholder="Current Password" />
+                <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                    <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+            <div class="password-input-container">
+                <input type="password" id="new-password-input" placeholder="New Password" />
+                <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                    <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+            <div class="password-input-container">
+                <input type="password" id="confirm-new-password-input" placeholder="Confirm New Password" />
+                <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                    <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="button-group">
+            <button id="submit-change-password-button" class="primary">Change Password</button>
+            <button id="cancel-change-password-button" class="secondary">Cancel</button>
+        </div>
     </div>
 
     <script src="auth.js" type="module"></script>
     <script src="popup.js" type="module"></script>
+    <script src="popup-size.js" type="module"></script>
+    <script src="password-toggle.js" type="module"></script>
+</body>
+
+</html><!DOCTYPE html>
+<html>
+
+<head>
+    <title>Extension Privacy Analyzer</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Loading State -->
+    <div id="initial-loader" class="loader-container">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Lock Screen / Set Password Screen -->
+    <div id="lock-screen-container" class="card hidden">
+        <h3 id="lock-title">Unlock Extension</h3>
+        <p id="lock-subtitle" class="text-muted hidden">Please set a password to secure your extension.</p>
+        <div id="lock-error" class="error-message hidden"></div>
+        <div class="form-group">
+            <div class="password-input-container">
+                <input type="password" id="password-input" placeholder="Enter Password" />
+                <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                    <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+            <div class="password-input-container">
+                <input type="password" id="confirm-password-input" placeholder="Confirm Password" class="hidden" />
+                <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                    <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="button-group">
+            <button id="unlock-button" class="primary">Unlock</button>
+            <button id="set-password-button" class="primary hidden">Set Password</button>
+        </div>
+    </div>
+
+    <!-- Main Application Content -->
+    <div id="main-app-content" class="hidden">
+        <div class="header">
+            <h1>Extension Privacy Analyzer</h1>
+            <button id="open-in-tab-button" class="secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Open in New Tab
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Privacy Analysis</h2>
+                <div class="toggle-container">
+                    <label for="analysisToggle">Enable Analysis</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="analysisToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="button-group">
+                <button id="analyzeButton" class="primary">Analyze Extensions</button>
+                <button id="downloadFullReportButton" class="secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download Full Report
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Analysis Report</h2>
+            <div id="reportContainer">
+                <p class="text-muted">Enable analysis and click "Analyze Extensions" to see the report.</p>
+            </div>
+        </div>
+
+        <div class="card theme-selector-container">
+            <h3>Appearance</h3>
+            <div class="theme-buttons">
+                <button id="theme-light-button" data-theme="light">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    Light
+                </button>
+                <button id="theme-dark-button" data-theme="dark">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    Dark
+                </button>
+                <button id="theme-system-button" data-theme="system">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                    System
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="button-group">
+                <button id="change-password-nav-button" class="secondary">Change Password</button>
+                <button id="lock-extension-button" class="secondary">Lock Extension</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Screen -->
+    <div id="change-password-container" class="card hidden">
+        <h3>Change Password</h3>
+        <div id="change-password-error" class="error-message hidden"></div>
+        <div id="change-password-success" class="success-message hidden"></div>
+        <div class="form-group">
+            <div class="password-input-container">
+                <input type="password" id="current-password-input" placeholder="Current Password" />
+                <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                    <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+            <div class="password-input-container">
+                <input type="password" id="new-password-input" placeholder="New Password" />
+                <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                    <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+            <div class="password-input-container">
+                <input type="password" id="confirm-new-password-input" placeholder="Confirm New Password" />
+                <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                    <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="button-group">
+            <button id="submit-change-password-button" class="primary">Change Password</button>
+            <button id="cancel-change-password-button" class="secondary">Cancel</button>
+        </div>
+    </div>
+
+    <script src="auth.js" type="module"></script>
+    <script src="popup.js" type="module"></script>
+    <script src="popup-size.js" type="module"></script>
+    <script src="password-toggle.js" type="module"></script>
 </body>
 
 </html>

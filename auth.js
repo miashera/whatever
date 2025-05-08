@@ -112,49 +112,43 @@ function applyTheme(theme) {
         actualTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
 
-    if (actualTheme === 'dark') {
-        body.classList.add('dark-theme');
-    } else {
-        body.classList.add('light-theme'); // Default to light
-    }
+    // Add the appropriate theme class
+    body.classList.add(actualTheme === 'dark' ? 'dark-theme' : 'light-theme');
 
     // Update button active states
     if (themeLightButton) themeLightButton.classList.toggle('active', theme === 'light');
     if (themeDarkButton) themeDarkButton.classList.toggle('active', theme === 'dark');
     if (themeSystemButton) themeSystemButton.classList.toggle('active', theme === 'system');
 
+    // Store the theme preference
+    chrome.storage.local.set({ [THEME_KEY]: theme });
     console.log(`Applied theme: ${theme} (resolved to: ${actualTheme})`);
 }
 
 function setThemePreference(theme) {
-    chrome.storage.local.set({ [THEME_KEY]: theme }, () => {
-        applyTheme(theme);
-        console.log('Theme preference saved:', theme);
-    });
+    applyTheme(theme);
 }
 
 function initializeTheme() {
     chrome.storage.local.get([THEME_KEY], (result) => {
-        const preferredTheme = result[THEME_KEY] || 'system'; // Default to system
+        const preferredTheme = result[THEME_KEY] || 'system';
         applyTheme(preferredTheme);
     });
 
-    // Listen for system theme changes if 'system' is the current preference
+    // Listen for system theme changes
     const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
     function handleSystemThemeChange(event) {
         chrome.storage.local.get([THEME_KEY], (result) => {
             if ((result[THEME_KEY] || 'system') === 'system') {
-                console.log('System theme changed, re-applying.');
                 applyTheme('system');
             }
         });
     }
     
-    // Modern way to add listener
     if (darkModeMediaQuery.addEventListener) {
         darkModeMediaQuery.addEventListener('change', handleSystemThemeChange);
-    } else if (darkModeMediaQuery.addListener) { // Fallback for older browsers (less likely needed in extensions)
+    } else if (darkModeMediaQuery.addListener) {
         darkModeMediaQuery.addListener(handleSystemThemeChange);
     }
 }
@@ -541,3 +535,94 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Change password functionality
+function setupChangePassword() {
+    const changePasswordButton = document.getElementById('change-password-button');
+    const changePasswordContainer = document.getElementById('change-password-container');
+    const submitChangePasswordButton = document.getElementById('submit-change-password-button');
+    const cancelChangePasswordButton = document.getElementById('cancel-change-password-button');
+    const currentPasswordInput = document.getElementById('current-password-input');
+    const newPasswordInput = document.getElementById('new-password-input');
+    const confirmNewPasswordInput = document.getElementById('confirm-new-password-input');
+    const changePasswordError = document.getElementById('change-password-error');
+    const changePasswordSuccess = document.getElementById('change-password-success');
+
+    changePasswordButton.addEventListener('click', () => {
+        changePasswordContainer.classList.remove('hidden');
+        document.getElementById('main-container').classList.add('hidden');
+    });
+
+    cancelChangePasswordButton.addEventListener('click', () => {
+        changePasswordContainer.classList.add('hidden');
+        document.getElementById('main-container').classList.remove('hidden');
+        // Clear inputs and messages
+        currentPasswordInput.value = '';
+        newPasswordInput.value = '';
+        confirmNewPasswordInput.value = '';
+        changePasswordError.classList.add('hidden');
+        changePasswordSuccess.classList.add('hidden');
+    });
+
+    submitChangePasswordButton.addEventListener('click', async () => {
+        const currentPassword = currentPasswordInput.value;
+        const newPassword = newPasswordInput.value;
+        const confirmNewPassword = confirmNewPasswordInput.value;
+
+        // Clear previous messages
+        changePasswordError.classList.add('hidden');
+        changePasswordSuccess.classList.add('hidden');
+
+        // Validate inputs
+        if (!currentPassword || !newPassword || !confirmNewPassword) {
+            changePasswordError.textContent = 'Please fill in all fields';
+            changePasswordError.classList.remove('hidden');
+            return;
+        }
+
+        if (newPassword !== confirmNewPassword) {
+            changePasswordError.textContent = 'New passwords do not match';
+            changePasswordError.classList.remove('hidden');
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            changePasswordError.textContent = 'New password must be at least 8 characters long';
+            changePasswordError.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            // Verify current password
+            const isCorrect = await verifyPassword(currentPassword);
+            if (!isCorrect) {
+                changePasswordError.textContent = 'Current password is incorrect';
+                changePasswordError.classList.remove('hidden');
+                return;
+            }
+
+            // Change password
+            await changePassword(newPassword);
+            
+            // Show success message
+            changePasswordSuccess.textContent = 'Password changed successfully';
+            changePasswordSuccess.classList.remove('hidden');
+
+            // Clear inputs
+            currentPasswordInput.value = '';
+            newPasswordInput.value = '';
+            confirmNewPasswordInput.value = '';
+
+            // Return to main screen after a delay
+            setTimeout(() => {
+                changePasswordContainer.classList.add('hidden');
+                document.getElementById('main-container').classList.remove('hidden');
+                changePasswordSuccess.classList.add('hidden');
+            }, 2000);
+        } catch (error) {
+            console.error('Error changing password:', error);
+            changePasswordError.textContent = 'Failed to change password. Please try again.';
+            changePasswordError.classList.remove('hidden');
+        }
+    });
+}
